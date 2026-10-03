@@ -202,3 +202,6 @@ class Game extends Phaser.Scene{
   CombatFeedback.update(d);
  }
 }
+
+/* 明確掛到 window，避免不同瀏覽器/模組載入環境下的 global lexical scope 差異。 */
+window.Game = Game;
