@@ -26,28 +26,26 @@
       G.TouchUI.init();
 
       G.game = new G.Phaser.Game({
-        type: G.Phaser.CANVAS,
+        type: G.Phaser.AUTO,
         width: G.W,
         height: G.H,
-        parent: 'game-root',
+        parent: document.body,
         backgroundColor: '#07080c',
         pixelArt: true,
         antialias: false,
         audio: { noAudio: true },
         scale: {
-          mode: G.Phaser.Scale.ENVELOP,
+          mode: G.Phaser.Scale.FIT,
           autoCenter: G.Phaser.Scale.CENTER_BOTH,
           width: G.W,
           height: G.H,
-          expandParent: true
+          expandParent: false
         },
         render: { antialias: false, roundPixels: true },
         input: { activePointers: 6 },
         scene: G.Game
       });
 
-      G.addEventListener('error', function(ev){ showError(ev.error || new Error(ev.message || 'Runtime error')); }, { passive: true });
-      G.addEventListener('unhandledrejection', function(ev){ showError(ev.reason || new Error('Unhandled promise rejection')); }, { passive: true });
       G.addEventListener('resize', refresh, { passive: true });
       G.addEventListener('orientationchange', function () {
         refresh(); G.setTimeout(refresh, 250); G.setTimeout(refresh, 700);
