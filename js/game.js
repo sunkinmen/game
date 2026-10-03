@@ -128,16 +128,38 @@ class Game extends Phaser.Scene{
   AudioManager.stopBGM({fade:.3});
   if(win)AudioManager.play('level_clear');else{AudioManager.play('player_die');AudioManager.play('game_over',{delay:.9});CombatFeedback.playerDeath()}
   fx(this.add.text(W/2,H/2,(win?'全關通關！':'你倒下了')+'\n分數 '+this.score+'　最高 '+best+'\n\n點一下重新開始',{fontSize:'24px',color:'#fff',align:'center',stroke:'#000',strokeThickness:5})).setOrigin(.5).setDepth(2000)}
- update(_,dt){
+update(_,dt){
   if(this.paused)return;
-  if(dt>50)dt=50;                                   // 切回分頁 / 卡頓後避免一次跳太大
+  
+  // 1. 防護：確保 dt 是有效數字，避免在手機剛啟動或翻轉時拿到 undefined/NaN
+  if(typeof dt !== 'number' || isNaN(dt)) dt = 16.6; 
+  if(dt>50)dt=50;                                   
+  
   if(this.end){CombatFeedback.update(dt/1000);return}
-  if(CombatFeedback.freeze(dt))return;              // hit-stop：極短暫凍結
+  if(CombatFeedback.freeze(dt))return;              
   InputManager.frame();
   this.t+=dt;const t=this.t,d=dt/1000,p=this.p,IM=InputManager,cam=this.cameras.main;
-  const mx=this.mvx=IM.moveX();if(mx)p.dir=mx;
-  let kx=0;if(this.pkx){kx=this.pkx*d;this.pkx*=Math.pow(.0005,d);if(Math.abs(this.pkx)<10)this.pkx=0}
-  p.x=Phaser.Math.Clamp(p.x+mx*140*d+kx,cam.scrollX+14,LW-14);
+  
+  // 2. 防護：確保 InputManager 回傳的絕對是數字 0，不能是 undefined
+  const mx = this.mvx = (IM.moveX() || 0); 
+  if(mx) p.dir = mx;
+  
+  let kx=0;
+  if(this.pkx){
+      kx=this.pkx*d;
+      this.pkx*=Math.pow(.0005,d);
+      if(Math.abs(this.pkx)<10) this.pkx=0;
+  }
+  
+  // 3. 防護：確保攝影機的 scrollX 沒有壞掉，再進行 Clamp 計算
+  const safeCamX = isNaN(cam.scrollX) ? 0 : cam.scrollX;
+  p.x = Phaser.Math.Clamp(p.x + mx * 140 * d + kx, safeCamX + 14, LW - 14);
+  
+  // 終極防護：如果主角座標還是變成 NaN，強制拉回預設點，避免整個畫面渲染崩潰
+  if (isNaN(p.x)) p.x = 60;
+  if (isNaN(p.y)) p.y = GY;
+
+  /* --- 下方的跳躍邏輯維持原樣不變 --- */
   /* 跳躍：提前輸入緩衝 + 離地寬限 + 可變跳躍高度 */
   if(IM.justPressed('JUMP'))this.jbuf=JUMP_BUF;else if(this.jbuf>0)this.jbuf-=dt;
   if(this.og){this.coy=COYOTE;this.jc=0}else if(this.coy>0)this.coy-=dt;
