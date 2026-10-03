@@ -67,6 +67,7 @@ class Game extends Phaser.Scene{
   if(cf.k==='rain'){this.rg=fx(this.add.graphics()).setDepth(998);this.rn=Array.from({length:60},()=>({x:Math.random()*W,y:Math.random()*H}))}
   this.events.once('shutdown',()=>{this.offs.forEach(f=>f());this.offs=[];EnemyFactory.dispose();if(Menu.isOpen())Menu.close()});
   AudioManager.playBGM(cf.bgm,{delay:d.clear?1.5:.1,fade:.5});
+  window.__GAME_SCENE_READY__=true;
   this.msg('第 '+(si+1)+' 關　'+cf.n);this.time.delayedCall(700,()=>this.say(this.p,cf.q,2400));
  }
  /* 背景：視差 5 層交給 ParallaxBackground；這裡只畫「遊戲層」（地面、坑洞、平台，速度 1.0） */
@@ -128,42 +129,16 @@ class Game extends Phaser.Scene{
   AudioManager.stopBGM({fade:.3});
   if(win)AudioManager.play('level_clear');else{AudioManager.play('player_die');AudioManager.play('game_over',{delay:.9});CombatFeedback.playerDeath()}
   fx(this.add.text(W/2,H/2,(win?'全關通關！':'你倒下了')+'\n分數 '+this.score+'　最高 '+best+'\n\n點一下重新開始',{fontSize:'24px',color:'#fff',align:'center',stroke:'#000',strokeThickness:5})).setOrigin(.5).setDepth(2000)}
-update(_,dt){
+ update(_,dt){
   if(this.paused)return;
-  
-  // 1. 時間與狀態防護：避免轉向瞬間 dt 為 undefined 或造成 NaN 污染
-  if(typeof dt !== 'number' || isNaN(dt)) dt = 16.6;
-  if(dt>50)dt=50;
-  if(isNaN(this.t)) this.t = 0;
-  
+  if(dt>50)dt=50;                                   // 切回分頁 / 卡頓後避免一次跳太大
   if(this.end){CombatFeedback.update(dt/1000);return}
-  if(CombatFeedback.freeze(dt))return;
+  if(CombatFeedback.freeze(dt))return;              // hit-stop：極短暫凍結
   InputManager.frame();
-  
-  this.t+=dt;
-  const t=this.t,d=dt/1000,p=this.p,IM=InputManager,cam=this.cameras.main;
-  
-  // 2. 攝影機與實體防護：只要壞過一影格就會全黑，偵測到 NaN 立即重置
-  if (isNaN(cam.scrollX)) cam.scrollX = 0;
-  if (isNaN(cam.scrollY)) cam.scrollY = 0;
-  if (isNaN(p.x)) p.x = 60;
-  if (isNaN(p.y)) p.y = GY;
-  if (isNaN(p.vy)) p.vy = 0;
-  
-  // 3. 輸入數值防護
-  const mx=this.mvx=(IM.moveX() || 0); 
-  if(mx) p.dir=mx;
-  
-  let kx=0;
-  if(this.pkx){
-   kx=this.pkx*d;
-   if (isNaN(kx)) kx = 0;
-   this.pkx*=Math.pow(.0005,d);
-   if(isNaN(this.pkx) || Math.abs(this.pkx)<10) this.pkx=0;
-  }
-  
+  this.t+=dt;const t=this.t,d=dt/1000,p=this.p,IM=InputManager,cam=this.cameras.main;
+  const mx=this.mvx=IM.moveX();if(mx)p.dir=mx;
+  let kx=0;if(this.pkx){kx=this.pkx*d;this.pkx*=Math.pow(.0005,d);if(Math.abs(this.pkx)<10)this.pkx=0}
   p.x=Phaser.Math.Clamp(p.x+mx*140*d+kx,cam.scrollX+14,LW-14);
-
   /* 跳躍：提前輸入緩衝 + 離地寬限 + 可變跳躍高度 */
   if(IM.justPressed('JUMP'))this.jbuf=JUMP_BUF;else if(this.jbuf>0)this.jbuf-=dt;
   if(this.og){this.coy=COYOTE;this.jc=0}else if(this.coy>0)this.coy-=dt;
