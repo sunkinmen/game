@@ -1,7 +1,7 @@
 /* Service Worker：只做離線快取，不參與遊戲啟動。
  * 重要：所有遊戲 JS 都位於 ./js/；不要把 sw.js 當 <script> 載入。
  */
-const CACHE = 'tgta-v10';
+const CACHE = 'tgta-v8';
 const CORE = [
   './','./index.html','./manifest.json','./icon.svg',
   './js/config.js','./js/save.js','./js/levels.js','./js/audio.js','./js/input.js',
