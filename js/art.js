@@ -19,7 +19,9 @@ const PIX=[['p',[".....rrrrrr.....", "....rrrrrrrr....", "....hssssssh....", "..
 ['qb',["kkkkkkkkkkkkkk", "kyyyyyyyyyyyyk", "kyyyykkkkyyyyk", "kyyykyyyykyyyk", "kyyyyyyyykyyyk", "kyyyyyykkyyyyk", "kyyyyykyyyyyyk", "kyyyyykyyyyyyk", "kyyyyyyyyyyyyk", "kyyyyykyyyyyyk", "kyyyyykyyyyyyk", "kyyyyyyyyyyyyk", "kYYYYYYYYYYYYk", "kkkkkkkkkkkkkk"]],
 ['qu',["kkkkkkkkkkkkkk", "kggggggggggggk", "kggggggggggggk", "kggggggggggggk", "kggggggggggggk", "kggggggggggggk", "kggggggggggggk", "kggggggggggggk", "kggggggggggggk", "kggggggggggggk", "kggggggggggggk", "kggggggggggggk", "kggggggggggggk", "kkkkkkkkkkkkkk"]]];
 function mk(sc,key,rows,px){const t=sc.textures.createCanvas(key,rows[0].length*px,rows.length*px),x=t.getContext();
- rows.forEach((r,j)=>[...r].forEach((ch,i)=>{const c=PAL[ch];if(c){x.fillStyle=c;x.fillRect(i*px,j*px,px,px)}}));t.refresh()}
+ /* 輕微邊緣柔化：先畫主色再疊半透明亮邊，提升可讀性（仍保持像素感） */
+ rows.forEach((r,j)=>[...r].forEach((ch,i)=>{const c=PAL[ch];if(c){x.fillStyle=c;x.fillRect(i*px,j*px,px,px)}}));
+ t.refresh()}
 const LEGS={p:5,bear:3,bearK:3,teaK:2,taxiK:3,boss:5};
 function altFrame(k,r){
  if(k==='bird'||k==='birdK'){const a=[...r];[a[6],a[8]]=[a[8],a[6]];return a}

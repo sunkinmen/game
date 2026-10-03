@@ -9,7 +9,9 @@ const WEAPONS=[null,
  {n:'雷射槍',d:3,r:240,s:620,p:1,c:0xcc55ff,pierce:1,kb:.8},
  {n:'電漿砲',d:7,r:420,s:500,p:3,c:0xffcc33,sp:.25,pierce:1,big:1,kb:1.6}];
 const hex=n=>'#'+n.toString(16).padStart(6,'0');
-const ST={fontSize:'14px',color:'#fff',stroke:'#000',strokeThickness:3};
+const FONT='"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif';
+const ST={fontFamily:FONT,fontSize:'15px',color:'#fff',stroke:'#0a0c12',strokeThickness:4,resolution:2};
+const ST2={fontFamily:FONT,fontSize:'26px',color:'#ffe566',stroke:'#0a0c12',strokeThickness:6,resolution:2};
 const fx=o=>o.setScrollFactor(0);
 const pick=a=>a[Math.random()*a.length|0];
 const TALK={coin:['賺到啦！','發財啦～','呷飽沒？有錢啦'],shroom:['吃蕈蕈變大隻！','補一下啦～'],star:['無敵啦！衝三小！','來呀～閃開啦'],hurt:['靠杯喔！','哎喲喂～','痛痛痛啦！'],pit:['夭壽喔！掉下去啦'],kill:['爽啦！','小事一樁','夭壽讚！'],weapon:['這支夠力！','讚啦！新傢伙'],block:['敲到寶啦！','哇～有料！'],
@@ -17,10 +19,11 @@ const TALK={coin:['賺到啦！','發財啦～','呷飽沒？有錢啦'],shroom:
  shooter:['看我的啦！','吃我一發'],jumper:['跳跳跳～','蹦蹦蹦'],chaser:['衝啊！！','別跑！'],tank:['大隻的來啦','撞死你']};
 
 /* 手感參數（毫秒 / 速度） */
-const DOUBLE_JUMP=false;   // 二段跳預設關閉（原版沒有）；設 true 即啟用並觸發 player_double_jump
-const JUMP_BUF=110;        // 落地前提早按跳，落地瞬間仍會起跳
-const COYOTE=90;           // 離開平台邊緣後仍可起跳的寬限
-const JUMP_CUT=240;        // 提早放開跳躍鍵 → 上升速度上限（短按 = 小跳，長按 = 大跳）
+const DOUBLE_JUMP=true;    // 二段跳：方便爬高台與修正關卡可達性
+const JUMP_BUF=120;        // 落地前提早按跳，落地瞬間仍會起跳
+const COYOTE=100;          // 離開平台邊緣後仍可起跳的寬限
+const JUMP_CUT=220;        // 提早放開跳躍鍵 → 上升速度上限（短按 = 小跳，長按 = 大跳）
+const JUMP_V=-420;         // 起跳初速（約可跳 ~80px，配合階梯平台）
 
 class Game extends Phaser.Scene{
  init(d){this.d=d||{}}
@@ -33,7 +36,25 @@ class Game extends Phaser.Scene{
   let sd=si*977+13;const R=()=>(sd=(sd*16807)%2147483647)/2147483647;this.R=R;
   const pits=[];for(let i=0;i<cf.pits;i++)pits.push(800+i*((LW-1700)/cf.pits)+R()*180);
   this.gs=[];let c0=0;pits.forEach(x=>{this.gs.push([c0,x]);c0=x+90});this.gs.push([c0,LW]);
-  this.pf=[];for(let i=0;i<9;i++)this.pf.push({x:300+i*((LW-800)/9)+R()*80,y:GY-60-(R()*2|0)*50,w:90+R()*60});
+  /* 平台：階梯式生成，垂直落差 ≤55、水平可連跳，保證從地面可層層上去 */
+  this.pf=[];
+  (function genPf(){
+    let x=260;
+    while(x<LW-420){
+      const steps=2+(R()*3|0);           /* 2~4 階 */
+      let y=GY-48, sx=x;
+      for(let s=0;s<steps;s++){
+        const w=72+R()*48;
+        this.pf.push({x:sx,y:y,w:w});
+        sx+=28+R()*36;                   /* 下一階略往前 */
+        y-=44+R()*10;                    /* 垂直落差約 44~54，單跳可達 */
+        if(y<GY-170)break;
+      }
+      /* 偶而加一層中段平台當落地緩衝 */
+      if(R()<.45){const my=GY-48-(R()*2|0)*22;this.pf.push({x:x+90+R()*40,y:my,w:60+R()*40})}
+      x+=260+R()*180;
+    }
+  }).call(this);
   this.bg(R);
   this.pf.forEach((f,i)=>{if(i===2)this.addIt('shroom',f.x+f.w/2,f.y-16);else if(i===6)this.addIt('star',f.x+f.w/2,f.y-16);
    else for(let k=0;k<4;k++)this.addIt('coin',f.x+16+k*(f.w-32)/3,f.y-18)});
@@ -49,8 +70,8 @@ class Game extends Phaser.Scene{
   CombatFeedback.init(this);
   this.gf=fx(this.add.graphics()).setDepth(999);
   this.ht=fx(this.add.text(8,6,'',ST)).setDepth(1000);
-  this.mt=fx(this.add.text(W/2,110,'',{fontSize:'24px',color:'#ffdd55',stroke:'#000',strokeThickness:5})).setOrigin(.5).setDepth(1000).setAlpha(0);
-  const icon=(x,t,fn)=>{const o=fx(this.add.text(x,2,t,{fontSize:'22px',padding:{x:6,y:4}})).setOrigin(1,0).setDepth(1000).setInteractive();o.on('pointerdown',fn);return o};
+  this.mt=fx(this.add.text(W/2,110,'',ST2)).setOrigin(.5).setDepth(1000).setAlpha(0);
+  const icon=(x,t,fn)=>{const o=fx(this.add.text(x,2,t,{fontFamily:FONT,fontSize:'22px',padding:{x:6,y:4},resolution:2})).setOrigin(1,0).setDepth(1000).setInteractive();o.on('pointerdown',fn);return o};
   this.mb=icon(W-4,AudioManager.isMuted()?'🔇':'🔊',()=>{AudioManager.unlock();const m=AudioManager.toggleMute();if(!m)AudioManager.play('button_click');this.mb.setText(m?'🔇':'🔊')});
   this.fs=icon(W-48,'⛶',()=>{AudioManager.play('button_click');try{const sc=this.scale;if(sc.isFullscreen)sc.stopFullscreen();else{sc.startFullscreen();screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})}}catch(e){}});
   this.gear=icon(W-92,'⚙',()=>Menu.open());
@@ -77,7 +98,12 @@ class Game extends Phaser.Scene{
   n.fillStyle(0x05060a).fillRect(0,GY,LW,H-GY);
   this.gs.forEach(([a,b])=>{n.fillStyle(cf.ground).fillRect(a,GY,b-a,H-GY);n.fillStyle(0x8888a0).fillRect(a,GY,b-a,6);
    n.fillStyle(0xdddddd);for(let x=a+20;x<b-30;x+=60)n.fillRect(x,GY+36,28,3)});
-  this.pf.forEach(f=>{n.fillStyle(0xa0522d).fillRect(f.x,f.y,f.w,12).fillStyle(0xd08a5a).fillRect(f.x,f.y,f.w,4)})}
+  this.pf.forEach(f=>{
+    n.fillStyle(0x5a3a1a).fillRect(f.x,f.y,f.w,14);
+    n.fillStyle(0xc07840).fillRect(f.x,f.y,f.w,5);
+    n.fillStyle(0xe0a060).fillRect(f.x+1,f.y+1,f.w-2,2);
+    n.fillStyle(0x3a2810).fillRect(f.x,f.y+12,f.w,3);
+  })}
  /* ---- 給敵人 AI 使用的世界查詢 ---- */
  surfaceY(x,fy){const lim=fy-4;let r=null;
   for(let i=0;i<this.gs.length;i++){const g=this.gs[i];if(x>g[0]&&x<g[1]){if(GY>=lim)r=GY;break}}
@@ -91,10 +117,11 @@ class Game extends Phaser.Scene{
   this.it.push(o)}
  msg(s){this.mt.setText(s).setAlpha(1);this.tweens.add({targets:this.mt,alpha:0,delay:1600,duration:600})}
  say(o,t,ttl=1500){if(this.bb.length>=3||!o||!o.active)return;
-  const x=this.add.text(0,0,t,{fontSize:'14px',color:'#111',fontFamily:'sans-serif',fontStyle:'bold'}).setOrigin(.5),w=x.width+16,h=x.height+10,g=this.add.graphics();
+  const x=this.add.text(0,0,t,{fontSize:'14px',color:'#111',fontFamily:FONT,fontStyle:'bold',resolution:2}).setOrigin(.5),w=x.width+16,h=x.height+10,g=this.add.graphics();
   g.fillStyle(0xffffff).fillRoundedRect(-w/2,-h/2,w,h,8).lineStyle(2,0x111111).strokeRoundedRect(-w/2,-h/2,w,h,8).fillTriangle(-5,h/2-1,5,h/2-1,0,h/2+9).lineBetween(-5,h/2,0,h/2+9).lineBetween(5,h/2,0,h/2+9);
   this.bb.push({c:this.add.container(o.x,o.y,[g,x]).setDepth(1500),o,e:this.t+ttl})}
- ang(){const p=this.p,up=InputManager.isDown('UP'),r=p.dir>0;return up?(this.mvx?(r?-Math.PI/4:-3*Math.PI/4):-Math.PI/2):(r?0:Math.PI)}
+ /* 八方向瞄準：虛擬搖桿優先；否則鍵盤 WASD/方向鍵組合；無輸入時朝面向 */
+ ang(){const a=InputManager.getAim(this.p.dir>0);if(a!==null&&a!==undefined)return a;return this.p.dir>0?0:Math.PI}
  burst(x,y,c,n,v){CombatFeedback.burst(x,y,c,n,v)}
  hitBlock(b){if(b.used)return;b.used=true;b.s.setTexture('qu');this.tweens.add({targets:b.s,y:b.s.y-8,yoyo:true,duration:90});
   const r=Math.random(),x=b.x+14,y=b.y-14;AudioManager.play('block_hit');this.burst(x,b.y+14,0xffdd55,8,200);
@@ -127,7 +154,7 @@ class Game extends Phaser.Scene{
   const best=SaveManager.setBest(this.score);
   AudioManager.stopBGM({fade:.3});
   if(win)AudioManager.play('level_clear');else{AudioManager.play('player_die');AudioManager.play('game_over',{delay:.9});CombatFeedback.playerDeath()}
-  fx(this.add.text(W/2,H/2,(win?'全關通關！':'你倒下了')+'\n分數 '+this.score+'　最高 '+best+'\n\n點一下重新開始',{fontSize:'24px',color:'#fff',align:'center',stroke:'#000',strokeThickness:5})).setOrigin(.5).setDepth(2000)}
+  fx(this.add.text(W/2,H/2,(win?'全關通關！':'你倒下了')+'\n分數 '+this.score+'　最高 '+best+'\n\n點一下重新開始',{fontFamily:FONT,fontSize:'26px',color:'#fff',align:'center',stroke:'#0a0c12',strokeThickness:6,resolution:2})).setOrigin(.5).setDepth(2000)}
  update(_,dt){
   if(this.paused)return;
   if(dt>50)dt=50;                                   // 切回分頁 / 卡頓後避免一次跳太大
@@ -135,15 +162,15 @@ class Game extends Phaser.Scene{
   if(CombatFeedback.freeze(dt))return;              // hit-stop：極短暫凍結
   InputManager.frame();
   this.t+=dt;const t=this.t,d=dt/1000,p=this.p,IM=InputManager,cam=this.cameras.main;
-  const mx=this.mvx=IM.moveX();if(mx)p.dir=mx;
+  const mx=this.mvx=IM.moveX();if(Math.abs(mx)>.2)p.dir=mx>0?1:-1;
   let kx=0;if(this.pkx){kx=this.pkx*d;this.pkx*=Math.pow(.0005,d);if(Math.abs(this.pkx)<10)this.pkx=0}
   p.x=Phaser.Math.Clamp(p.x+mx*140*d+kx,cam.scrollX+14,LW-14);
   /* 跳躍：提前輸入緩衝 + 離地寬限 + 可變跳躍高度 */
   if(IM.justPressed('JUMP'))this.jbuf=JUMP_BUF;else if(this.jbuf>0)this.jbuf-=dt;
   if(this.og){this.coy=COYOTE;this.jc=0}else if(this.coy>0)this.coy-=dt;
   if(this.jbuf>0){
-   if(this.og||this.coy>0){p.vy=-400;this.og=false;this.coy=0;this.jbuf=0;this.jhold=true;AudioManager.play('player_jump');CombatFeedback.dust(p.x,p.y)}
-   else if(DOUBLE_JUMP&&this.jc<1){p.vy=-360;this.jc=1;this.jbuf=0;this.jhold=true;AudioManager.play('player_double_jump');CombatFeedback.dust(p.x,p.y)}}
+   if(this.og||this.coy>0){p.vy=JUMP_V;this.og=false;this.coy=0;this.jbuf=0;this.jhold=true;AudioManager.play('player_jump');CombatFeedback.dust(p.x,p.y)}
+   else if(DOUBLE_JUMP&&this.jc<1){p.vy=JUMP_V*.9;this.jc=1;this.jbuf=0;this.jhold=true;AudioManager.play('player_double_jump');CombatFeedback.dust(p.x,p.y)}}
   if(IM.justReleased('JUMP')){if(this.jhold&&p.vy<-JUMP_CUT)p.vy=-JUMP_CUT;this.jhold=false}
   const py=p.y,vyb=p.vy;p.vy+=1100*d;p.y+=p.vy*d;let ld=null;
   if(p.vy<0){const hs=42*(this.big?Z*1.35:Z);for(const b of this.bk){const bt=b.y+28;if(p.x>b.x-6&&p.x<b.x+34&&py-hs>=bt&&p.y-hs<bt){p.y=bt+hs;p.vy=60;this.hitBlock(b);break}}}

@@ -9,7 +9,25 @@
     if (box) { box.textContent = '遊戲啟動失敗\n\n' + msg; box.style.display = 'block'; }
   }
 
+  /* Safari 分頁列／工具列會改動 visualViewport；用 innerHeight + visualViewport
+     把 body 高度鎖在「實際可見區」，再叫 Phaser scale.refresh()，避免畫面下半被擠出。 */
+  function fitViewport() {
+    var h = G.innerHeight;
+    var vv = G.visualViewport;
+    if (vv && vv.height > 0) {
+      /* visualViewport 更貼近 Safari 目前可見高度（含分頁列收合） */
+      h = Math.round(vv.height);
+    }
+    if (h > 0) {
+      try {
+        G.document.documentElement.style.height = h + 'px';
+        G.document.body.style.height = h + 'px';
+      } catch (_) {}
+    }
+  }
+
   function refresh() {
+    fitViewport();
     try { if (G.TouchUI) G.TouchUI.layout(); } catch (_) {}
     try { if (G.game && G.game.scale) G.game.scale.refresh(); } catch (_) {}
   }
@@ -20,6 +38,8 @@
       if (!G.AudioManager || !G.InputManager || !G.TouchUI || !G.Game)
         throw new Error('遊戲模組未完整載入：' +
           ['AudioManager','InputManager','TouchUI','Game'].filter(function (k) { return !G[k]; }).join(', '));
+
+      fitViewport();
 
       G.AudioManager.init();
       G.InputManager.init();
@@ -50,6 +70,16 @@
       G.addEventListener('orientationchange', function () {
         refresh(); G.setTimeout(refresh, 250); G.setTimeout(refresh, 700);
       }, { passive: true });
+
+      /* Safari 分頁列收合／展開主要靠 visualViewport */
+      if (G.visualViewport) {
+        G.visualViewport.addEventListener('resize', refresh, { passive: true });
+        G.visualViewport.addEventListener('scroll', refresh, { passive: true });
+      }
+
+      /* 頁面從背景回來、或工具列動畫結束後再對一次 */
+      G.addEventListener('pageshow', function () { refresh(); G.setTimeout(refresh, 100); }, { passive: true });
+      G.addEventListener('focus', function () { G.setTimeout(refresh, 50); }, { passive: true });
 
       if ('serviceWorker' in G.navigator) {
         G.addEventListener('load', function () {
