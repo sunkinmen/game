@@ -2,7 +2,34 @@
 AudioManager.init();          // 只註冊解鎖手勢，不建立 AudioContext
 InputManager.init();
 TouchUI.init();
-new Phaser.Game({type:Phaser.AUTO,width:W,height:H,backgroundColor:'#07080c',pixelArt:true,
- audio:{noAudio:true},        // 全遊戲只有 AudioManager 一個 AudioContext（關閉 Phaser 內建音訊，避免重複初始化）
- scale:{mode:Phaser.Scale.ENVELOP,autoCenter:Phaser.Scale.CENTER_BOTH},input:{activePointers:6},scene:Game});
-if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
+// 將 Phaser Game 實例指派給變數 game，以便後續呼叫
+const game = new Phaser.Game({
+    type: Phaser.AUTO, 
+    width: W, 
+    height: H, 
+    backgroundColor: '#07080c', 
+    pixelArt: true,
+    audio: { noAudio: true },        
+    scale: {
+        // 將 ENVELOP 改為 FIT，確保畫面完整顯示且不會被異常裁切出鏡
+        mode: Phaser.Scale.FIT, 
+        autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    input: { activePointers: 6 },
+    scene: Game
+});
+
+// 加入視窗大小改變 (翻轉) 的監聽器
+window.addEventListener('resize', () => {
+    // 延遲 250 毫秒，等待手機瀏覽器的網址列/工具列收合以及轉向確實完成
+    setTimeout(() => {
+        if (game.isBooted) {
+            game.scale.refresh(); // 強制重新計算畫布比例與尺寸
+        }
+    }, 250);
+});
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
