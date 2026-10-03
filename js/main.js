@@ -22,8 +22,15 @@
   function boot() {
     try {
       if (!G.Phaser) throw new Error('Phaser 尚未載入。請確認網路可以存取 cdnjs.cloudflare.com。');
-      if (!G.AudioManager || !G.InputManager || !G.TouchUI || !G.Game) {
-        throw new Error('遊戲模組未完整載入。請確認 js/ 資料夾與 index.html 位於同一網站根目錄。');
+      /* game.js 使用 classic script 的全域 lexical class Game，不會自動成為 window.Game。
+       * 其他模組則刻意掛在 window 上；因此這裡要用 typeof Game 檢查，而不是 G.Game。 */
+      if (!G.AudioManager || !G.InputManager || !G.TouchUI || typeof Game === 'undefined') {
+        var missing = [];
+        if (!G.AudioManager) missing.push('AudioManager');
+        if (!G.InputManager) missing.push('InputManager');
+        if (!G.TouchUI) missing.push('TouchUI');
+        if (typeof Game === 'undefined') missing.push('Game');
+        throw new Error('遊戲模組未完整載入：' + missing.join(', ') + '\n請確認 js/ 資料夾、檔案載入順序與 index.html 位於同一網站根目錄。');
       }
 
       G.AudioManager.init();
@@ -45,7 +52,7 @@
           expandParent: true
         },
         input: { activePointers: 6 },
-        scene: G.Game
+        scene: Game
       });
 
       G.addEventListener('resize', refreshLayout, { passive: true });
