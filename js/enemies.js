@@ -9,7 +9,7 @@
  * 新增敵人只需：1) 寫一個 class 覆寫 buildStates()  2) EnemyFactory.register('type', {...DEFS...}) */
 (function (G) {
   'use strict';
-  var W = 640, H = 360, GY = 300, LW = 3400, Z = 1.3, GRAV = 1000;
+  var W = 640, H = 360, GY = 300, LW = 3400, Z = (window.Z||2), GRAV = 1000;
   var TIER = { hp: [1, 4, 10], sp: [1, .8, .65], sc: [1, 1.6, 2.4], kb: [0, .3, .8] };
   var SCORE = [10, 50, 200, 1000];
   var rnd = Math.random, abs = Math.abs, sgn = Math.sign;

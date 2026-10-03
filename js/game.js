@@ -26,6 +26,7 @@ const JUMP_CUT=220;        // 提早放開跳躍鍵 → 上升速度上限（短
 const JUMP_V=-420;         // 起跳初速（約可跳 ~80px，配合階梯平台）
 
 class Game extends Phaser.Scene{
+ constructor(){super({key:'Game'})}
  init(d){this.d=d||{}}
  create(){
   const d=this.d,si=d.s||0,cf=STG[si];

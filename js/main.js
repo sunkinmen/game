@@ -35,9 +35,9 @@
   function boot() {
     try {
       if (!G.Phaser) throw new Error('Phaser 尚未載入');
-      if (!G.AudioManager || !G.InputManager || !G.TouchUI || !G.Game)
+      if (!G.AudioManager || !G.InputManager || !G.TouchUI || !G.Game || !G.Boot)
         throw new Error('遊戲模組未完整載入：' +
-          ['AudioManager','InputManager','TouchUI','Game'].filter(function (k) { return !G[k]; }).join(', '));
+          ['AudioManager','InputManager','TouchUI','Game','Boot'].filter(function (k) { return !G[k]; }).join(', '));
 
       fitViewport();
 
@@ -63,7 +63,7 @@
         },
         render: { antialias: false, roundPixels: true },
         input: { activePointers: 6 },
-        scene: G.Game
+        scene: [G.Boot, G.Game]
       });
 
       G.addEventListener('resize', refresh, { passive: true });
