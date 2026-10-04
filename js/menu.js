@@ -7,14 +7,14 @@
   var el = null, isOpen = false, hooks = [], lastClick = 0;
 
   var CSS = '#tgm{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;font:14px/1.3 sans-serif;color:#fff}' +
-    '#tgm .pn{width:min(94vw,640px);max-height:92%;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:#12151f;border:2px solid #3b8cff;border-radius:10px;padding:10px 14px;box-sizing:border-box}' +
-    '#tgm h2{margin:0 0 6px;font-size:18px}#tgm h3{margin:8px 0 4px;font-size:13px;color:#8fc4ff}' +
+    '#tgm .pn{width:min(94vw,640px);max-height:92%;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:linear-gradient(#26305a,#0d1124);border:3px solid #f2c14e;border-radius:14px;padding:10px 16px;box-sizing:border-box;box-shadow:0 0 0 2px #0a0c18,0 8px 30px rgba(0,0,0,.6),inset 0 0 0 2px rgba(255,255,255,.12)}' +
+    '#tgm h2{margin:0 0 6px;font-size:18px;color:#ffe9a0;text-shadow:0 2px 0 #0a0c18}#tgm h3{margin:8px 0 4px;font-size:13px;color:#8fc4ff;border-bottom:1px solid rgba(242,193,78,.4);padding-bottom:2px}' +
     '#tgm .cols{display:flex;gap:18px;flex-wrap:wrap}#tgm .col{flex:1 1 240px;min-width:0}' +
     '#tgm label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:5px 0;min-height:30px}' +
     '#tgm input[type=range]{flex:1;max-width:150px;height:28px}#tgm select{font-size:14px;padding:3px}' +
     '#tgm input[type=checkbox]{width:22px;height:22px}' +
-    '#tgm button{font-size:15px;padding:8px 16px;margin:8px 8px 2px 0;border:0;border-radius:6px;background:#3b8cff;color:#fff;min-height:40px}' +
-    '#tgm button.s{background:#444a5c}';
+    '#tgm button{font-size:15px;padding:8px 16px;margin:8px 8px 2px 0;border:2px solid #f2c14e;border-radius:8px;background:linear-gradient(#4a8cff,#2a5ac0);color:#fff;min-height:40px;font-weight:700;text-shadow:0 1px 0 #0a0c18}' +
+    '#tgm button.s{background:linear-gradient(#5a617a,#3a4056);border-color:#9aa0b8}';
 
   var HTML = '<div class="pn"><h2>⏸ 暫停 / 設定</h2><div class="cols"><div class="col"><h3>音訊</h3>' +
     '<label>主音量<input type="range" min="0" max="100" data-k="a_master"></label>' +

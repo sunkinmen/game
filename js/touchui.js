@@ -81,37 +81,36 @@
       if (!vis) return;
       c.setTransform(d, 0, 0, d, 0, 0);
       c.textAlign = 'center'; c.textBaseline = 'middle';
-
-      /* 搖桿底座 + 方向指示 */
+      var A = S.buttonOpacity;
+      /* 玻璃圓鈕：徑向漸層 + 高光 + 描邊 + 外圈柔光 */
+      var orb = function (x, y, r, rgb, on, a) {
+        var g = c.createRadialGradient(x - r * .3, y - r * .35, r * .1, x, y, r);
+        g.addColorStop(0, 'rgba(255,255,255,' + (a * (on ? .75 : .42)).toFixed(3) + ')');
+        g.addColorStop(.55, 'rgba(' + rgb + ',' + (a * (on ? .7 : .34)).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(' + rgb + ',' + (a * (on ? .5 : .16)).toFixed(3) + ')');
+        c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fillStyle = g; c.fill();
+        c.lineWidth = on ? 3 : 2; c.strokeStyle = 'rgba(255,255,255,' + Math.min(1, a + .2).toFixed(3) + ')'; c.stroke();
+        c.beginPath(); c.arc(x, y, r - 3.5, 0, 6.2832); c.lineWidth = 1; c.strokeStyle = 'rgba(' + rgb + ',' + Math.min(1, a + .1).toFixed(3) + ')'; c.stroke();
+        if (on) { c.beginPath(); c.arc(x, y, r + 5, 0, 6.2832); c.lineWidth = 3; c.strokeStyle = 'rgba(' + rgb + ',' + (a * .5).toFixed(3) + ')'; c.stroke(); }
+      };
       if (this.joy) {
-        var j = this.joy, st = IM.stickState(), a = Math.min(1, S.buttonOpacity + .1);
-        c.beginPath(); c.arc(j.x, j.y, j.r, 0, 6.2832);
-        c.fillStyle = 'rgba(255,255,255,' + (a * .12).toFixed(3) + ')'; c.fill();
-        c.lineWidth = 2.5; c.strokeStyle = 'rgba(255,255,255,' + (a * .35).toFixed(3) + ')'; c.stroke();
-        /* 八方向刻度 */
-        for (i = 0; i < 8; i++) {
-          var ang = i * Math.PI / 4, ir = j.r * .72, or = j.r * .88;
-          c.beginPath();
-          c.moveTo(j.x + Math.cos(ang) * ir, j.y + Math.sin(ang) * ir);
-          c.lineTo(j.x + Math.cos(ang) * or, j.y + Math.sin(ang) * or);
-          c.strokeStyle = 'rgba(255,255,255,' + (a * .2).toFixed(3) + ')'; c.lineWidth = 1.5; c.stroke();
+        var j = this.joy, st = IM.stickState(), a = Math.min(1, A + .1);
+        orb(j.x, j.y, j.r, '120,170,255', false, a * .55);
+        for (i = 0; i < 8; i++) {                                     // 八方向刻度（每 45° 一個小箭頭）
+          var ang = i * Math.PI / 4, tx = j.x + Math.cos(ang) * j.r * .8, ty = j.y + Math.sin(ang) * j.r * .8;
+          c.save(); c.translate(tx, ty); c.rotate(ang); c.beginPath(); c.moveTo(3, 0); c.lineTo(-2, -3); c.lineTo(-2, 3); c.closePath();
+          c.fillStyle = 'rgba(255,255,255,' + (a * (i % 2 ? .3 : .5)).toFixed(3) + ')'; c.fill(); c.restore();
         }
-        /* 搖桿帽 */
-        var kx = st.active ? st.cx : j.x, ky = st.active ? st.cy : j.y, kr = j.r * .42;
-        c.beginPath(); c.arc(kx, ky, kr, 0, 6.2832);
-        c.fillStyle = 'rgba(255,255,255,' + (a * (st.active ? .45 : .28)).toFixed(3) + ')'; c.fill();
-        c.lineWidth = 2; c.strokeStyle = 'rgba(180,220,255,' + Math.min(1, a + .2).toFixed(3) + ')'; c.stroke();
+        var kx = st.active ? st.cx : j.x, ky = st.active ? st.cy : j.y;
+        orb(kx, ky, j.r * .42, '200,225,255', st.active, Math.min(1, a + .15));
       }
-
       for (i = 0; i < this.buttons.length; i++) {
         var b = this.buttons[i], on = IM.touchDown(b.action), rr = b.r * (on ? .92 : 1), tn = TINT[b.action];
-        var alpha = Math.min(1, S.buttonOpacity + (on ? .38 : 0));
-        c.beginPath(); c.arc(b.x, b.y, rr, 0, 6.2832);
-        c.fillStyle = 'rgba(' + tn + ',' + (alpha * (on ? .55 : .22)).toFixed(3) + ')'; c.fill();
-        c.lineWidth = on ? 3 : 2; c.strokeStyle = 'rgba(' + tn + ',' + Math.min(1, alpha + .15).toFixed(3) + ')'; c.stroke();
-        c.fillStyle = 'rgba(255,255,255,' + Math.min(1, alpha + .25).toFixed(3) + ')';
-        c.font = '700 ' + Math.round(rr * .7) + 'px "Noto Sans TC",system-ui,sans-serif';
-        c.fillText(LABEL[b.action], b.x, b.y + 1);
+        var alpha = Math.min(1, A + (on ? .3 : .08));
+        orb(b.x, b.y, rr, tn, on, alpha);
+        c.font = '900 ' + Math.round(rr * .72) + 'px "Noto Sans TC",system-ui,sans-serif';
+        c.lineWidth = 3; c.strokeStyle = 'rgba(10,12,30,' + (alpha * .8).toFixed(3) + ')'; c.strokeText(LABEL[b.action], b.x, b.y + 1);
+        c.fillStyle = 'rgba(255,255,255,' + Math.min(1, alpha + .3).toFixed(3) + ')'; c.fillText(LABEL[b.action], b.x, b.y + 1);
       }
     }
   };

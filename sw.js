@@ -6,10 +6,7 @@ const CORE = [
   './','./index.html','./manifest.json','./icon.svg',
   './js/config.js','./js/save.js','./js/levels.js','./js/audio.js','./js/input.js',
   './js/touchui.js','./js/combat.js','./js/enemies.js','./js/parallax.js','./js/menu.js',
-  './js/art.js','./js/game.js','./js/main.js',
-  './assets/c/p.png','./assets/c/p2.png','./assets/c/bear.png','./assets/c/bear2.png',
-  './assets/c/bird.png','./assets/c/bird2.png','./assets/c/boss.png','./assets/c/boss2.png',
-  './assets/c/slime.png','./assets/c/p_alt.png','./assets/c/p_alt2.png','./assets/c/p_blue.png'
+  './js/stylize.js','./js/worldart.js','./js/hud.js','./js/grade.js','./js/art.js','./js/game.js','./js/main.js'
 ];
 self.addEventListener('install', function (event) {
   event.waitUntil(caches.open(CACHE).then(function (cache) { return cache.addAll(CORE); }).then(function () { return self.skipWaiting(); }));

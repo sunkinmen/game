@@ -26,14 +26,13 @@ const JUMP_CUT=220;        // 提早放開跳躍鍵 → 上升速度上限（短
 const JUMP_V=-420;         // 起跳初速（約可跳 ~80px，配合階梯平台）
 
 class Game extends Phaser.Scene{
- constructor(){super({key:'Game'})}
  init(d){this.d=d||{}}
  create(){
   const d=this.d,si=d.s||0,cf=STG[si];
   registerTextures(this);
   Object.assign(this,{si,cf,hp:d.hp||5,own:d.own||[0,1,0,0,0,0],cur:d.cur||1,score:d.score||0,coins:d.coins||0,
    en:[],bl:[],eb:[],it:[],t:0,nf:0,inv:0,star:0,big:false,og:false,end:false,bossOn:false,cleared:false,wi:0,safe:60,
-   bb:[],nsay:4000,aim:0,bk:[],fc:0,mvx:0,paused:false,pkx:0,jbuf:0,coy:0,jc:0,jhold:false,cpi:0,streak:0,lastCoin:-9999,bp:[],ebp:[]});
+   bb:[],nsay:4000,aim:0,bk:[],fc:0,mvx:0,paused:false,sqT:0,pkx:0,jbuf:0,coy:0,jc:0,jhold:false,cpi:0,streak:0,lastCoin:-9999,bp:[],ebp:[]});
   let sd=si*977+13;const R=()=>(sd=(sd*16807)%2147483647)/2147483647;this.R=R;
   const pits=[];for(let i=0;i<cf.pits;i++)pits.push(800+i*((LW-1700)/cf.pits)+R()*180);
   this.gs=[];let c0=0;pits.forEach(x=>{this.gs.push([c0,x]);c0=x+90});this.gs.push([c0,LW]);
@@ -70,16 +69,13 @@ class Game extends Phaser.Scene{
   this.ebpool=[];this.blpool=[];
   CombatFeedback.init(this);
   this.gf=fx(this.add.graphics()).setDepth(999);
-  this.ht=fx(this.add.text(8,6,'',ST)).setDepth(1000);
   this.mt=fx(this.add.text(W/2,110,'',ST2)).setOrigin(.5).setDepth(1000).setAlpha(0);
   const icon=(x,t,fn)=>{const o=fx(this.add.text(x,2,t,{fontFamily:FONT,fontSize:'22px',padding:{x:6,y:4},resolution:2})).setOrigin(1,0).setDepth(1000).setInteractive();o.on('pointerdown',fn);return o};
   this.mb=icon(W-4,AudioManager.isMuted()?'🔇':'🔊',()=>{AudioManager.unlock();const m=AudioManager.toggleMute();if(!m)AudioManager.play('button_click');this.mb.setText(m?'🔇':'🔊')});
   this.fs=icon(W-48,'⛶',()=>{AudioManager.play('button_click');try{const sc=this.scale;if(sc.isFullscreen)sc.stopFullscreen();else{sc.startFullscreen();screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})}}catch(e){}});
   this.gear=icon(W-92,'⚙',()=>Menu.open());
-  this.slots=[1,2,3,4,5].map(i=>{const x=W/2-84+(i-1)*42,y=24;
-   const r=fx(this.add.rectangle(x,y,36,30,0x111111)).setStrokeStyle(3,TC[i]).setInteractive().setDepth(1000);
-   const n=fx(this.add.sprite(x,y,'w'+i)).setScale(.8).setDepth(1001);
-   r.on('pointerdown',()=>{if(this.own[i]&&this.cur!==i){this.cur=i;AudioManager.play('button_click',{vol:.6})}});return {r,n}});
+  this.hud=Hud.create(this,{onSlot:n=>{if(this.own[n]&&this.cur!==n){this.cur=n;AudioManager.play('button_click',{vol:.6})}}});
+  this.grade=Grade.create(this,cf,W,H);
   /* 輸入全部經 InputManager；場景只訂閱事件並在 shutdown 取消訂閱（避免場景重啟後重複觸發） */
   this.offs=[InputManager.on('weapon',n=>{if(!this.end&&this.own[n]&&this.cur!==n){this.cur=n;AudioManager.play('button_click',{vol:.6})}}),
    InputManager.on('pause',()=>{if(!this.end)Menu.toggle()}),
@@ -95,16 +91,9 @@ class Game extends Phaser.Scene{
  bg(R){const cf=this.cf;
   ParallaxBackground.legacyBurn(R,cf,LW,W);
   this.px=new ParallaxBackground(this,{si:this.si,cf,W,H,GY,LW});
-  const n=this.add.graphics().setDepth(-10);
-  n.fillStyle(0x05060a).fillRect(0,GY,LW,H-GY);
-  this.gs.forEach(([a,b])=>{n.fillStyle(cf.ground).fillRect(a,GY,b-a,H-GY);n.fillStyle(0x8888a0).fillRect(a,GY,b-a,6);
-   n.fillStyle(0xdddddd);for(let x=a+20;x<b-30;x+=60)n.fillRect(x,GY+36,28,3)});
-  this.pf.forEach(f=>{
-    n.fillStyle(0x5a3a1a).fillRect(f.x,f.y,f.w,14);
-    n.fillStyle(0xc07840).fillRect(f.x,f.y,f.w,5);
-    n.fillStyle(0xe0a060).fillRect(f.x+1,f.y+1,f.w-2,2);
-    n.fillStyle(0x3a2810).fillRect(f.x,f.y+12,f.w,3);
-  })}
+  this.add.rectangle(0,GY,LW,H-GY,0x05060a).setOrigin(0).setDepth(-10.5);   // 坑洞底色
+  WorldArt.build(this,cf,this.gs,this.pf,GY,H);
+ }
  /* ---- 給敵人 AI 使用的世界查詢 ---- */
  surfaceY(x,fy){const lim=fy-4;let r=null;
   for(let i=0;i<this.gs.length;i++){const g=this.gs[i];if(x>g[0]&&x<g[1]){if(GY>=lim)r=GY;break}}
@@ -179,12 +168,19 @@ class Game extends Phaser.Scene{
    for(const y of c)if(py<=y+3&&p.y>=y&&(ld===null||y<ld))ld=y}
   if(ld!==null){p.y=ld;p.vy=0;if(!this.og&&vyb>260)CombatFeedback.dust(p.x,ld);this.og=true;if(ld===GY)this.safe=p.x}else this.og=false;
   if(p.y>H+60)this.hurt(true);
-  const sc=this.big?Z*1.35:Z;p.setScale(sc).setFlipX(p.dir<0).setDepth(p.y);p.alpha=(t<this.inv&&((t/80)|0)%2)?.4:1;p.setTexture(mx&&this.og&&((t/150)|0)%2?'p2':'p');
+  const sc=this.big?Z*1.35:Z;
+  /* 擠壓與拉伸：起跳/下墜拉長、落地壓扁、待機呼吸（只改視覺縮放，不動碰撞） */
+  if(ld!==null&&vyb>260)this.sqT=1;
+  let sx=sc,sy=sc;
+  if(!this.og){const k=Math.min(.18,Math.abs(p.vy)/1100);sx=sc*(1-k*.5);sy=sc*(1+k*.8)}
+  else if(this.sqT>0){this.sqT=Math.max(0,this.sqT-d*7);sx=sc*(1+.16*this.sqT);sy=sc*(1-.16*this.sqT)}
+  else if(!mx){sy=sc*(1+Math.sin(t/260)*.018)}
+  p.setScale(sx,sy).setFlipX(p.dir<0).setDepth(p.y);p.alpha=(t<this.inv&&((t/80)|0)%2)?.4:1;p.setTexture(mx&&this.og&&((t/150)|0)%2?'p2':'p');
   if(t<this.star)p.setTint(Phaser.Display.Color.HSVToRGB((t/300)%1,.6,1).color);else if(this.starOn){p.clearTint();this.starOn=false}
   const w=WEAPONS[this.cur];
   this.aim=this.ang();
   const rc=CombatFeedback.recoil,ca=Math.cos(this.aim),sa=Math.sin(this.aim);   // 後座力：武器沿射擊反方向後退並上揚
-  this.pw.setTexture('w'+this.cur).setScale(sc*(1+rc*.1),sc*(1-rc*.06)).setPosition(p.x-ca*rc*5,p.y-20*sc-sa*rc*5).setRotation(this.aim+(ca<0?1:-1)*rc*.1).setFlipY(ca<-.1).setDepth(p.y+1).setAlpha(p.alpha);
+  this.pw.setTexture('w'+this.cur).setScale(sc*(1+rc*.1),sc*(1-rc*.06)*(sy/sc)).setPosition(p.x-ca*rc*5,p.y-20*sc-sa*rc*5).setRotation(this.aim+(ca<0?1:-1)*rc*.1).setFlipY(ca<-.1).setDepth(p.y+1).setAlpha(p.alpha);
   if((IM.isDown('SHOOT')||IM.justPressed('SHOOT'))&&t>this.nf){this.nf=t+w.r;this.fire()}
   this.fc++;
   const bl=this.bl;
@@ -207,6 +203,7 @@ class Game extends Phaser.Scene{
   for(let i=this.it.length-1;i>=0;i--){const o=this.it[i];
    if(o.pop>0||o.pv>0){o.pv-=900*d;o.pop+=o.pv*d;if(o.pop<=0){o.pop=0;o.pv=0}}
    o.y=o.by+Math.sin(t/200+o.ph)*3-(o.pop||0);if(o.g)o.g.y=o.y;
+   if(o.kind==='coin')o.scaleX=1.2*(.22+.78*Math.abs(Math.cos(t/230+o.ph)));      // 金幣旋轉
    if(Math.hypot(o.x-p.x,o.y-p.y+20*sc)<26){o.dl=0;const k=o.kind;
     CombatFeedback.pickup(o.x,o.y,k==='coin'?0xffdd55:k==='w'?TC[o.tier]:0xffffff);
     if(k==='coin'){this.streak=t-this.lastCoin<700?this.streak+1:0;this.lastCoin=t;AudioManager.play('coin_collect',{pitch:1+Math.min(this.streak,7)*.05});
@@ -222,11 +219,11 @@ class Game extends Phaser.Scene{
    else this.say(p,this.hp<=2?'快撐不住啦…':this.big?'大隻真爽！':pick(['今天運氣不錯','吃飽沒？繼續衝','北漂辛苦啦']),1500)}
   for(let i=this.bb.length-1;i>=0;i--){const b=this.bb[i];if(!b.o.active||t>b.e){b.c.destroy();this.bb.splice(i,1)}else b.c.setPosition(Phaser.Math.Clamp(b.o.x,cam.scrollX+60,cam.scrollX+W-60),b.o.y-b.o.displayHeight-26)}
   const gf=this.gf.clear(),bo=this.en.find(e=>e.boss&&e.state!=='DEAD');
-  if(bo)gf.fillStyle(0,.6).fillRect(W/2-120,48,240,8).fillStyle(0xe03a3a).fillRect(W/2-120,48,240*Math.max(0,bo.hp/bo.mhp),8);
+  this.hud.bossBar(gf,bo);
   if(this.rg){const g=this.rg.clear().lineStyle(1,0x9ec9ff,.5);for(const r of this.rn){r.y+=620*d;r.x-=120*d;if(r.y>H){r.y=-10;r.x=Math.random()*(W+100)}g.lineBetween(r.x,r.y,r.x-3,r.y+10)}}
-  this.ht.setText('♥'.repeat(Math.max(0,this.hp))+(this.big?' 🍄':'')+(t<this.star?' ⭐':'')+'\n'+this.cf.n+'　🪙'+this.coins+'\n分數 '+this.score);
-  this.slots.forEach((s,i)=>{const n=i+1;s.r.setFillStyle(this.cur===n?TC[n]:0x111111,this.cur===n?.5:1);s.r.setAlpha(this.own[n]?1:.3);s.n.setAlpha(this.own[n]?1:.3)});
+  this.hud.update(d);
   this.px.update(d,cam.scrollX);
+  this.grade.update(d,cam.scrollX);this.grade.shadows(this,p,sx);
   CombatFeedback.update(d);
  }
 }
